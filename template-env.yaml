@@ -61,25 +61,6 @@ Resources:
             BucketName: !Ref BucketName
         - S3WritePolicy:
             BucketName: !Ref BucketName
-      Events:
-        S3Event:
-          Type: S3
-          Properties:
-            Bucket: !Ref BucketName
-            Events: s3:ObjectCreated:*
-            Filter:
-              S3Key:
-                Rules:
-                  - Name: suffix
-                    Value: .jpg
-                  - Name: suffix
-                    Value: .jpeg
-                  - Name: suffix
-                    Value: .png
-                  - Name: suffix
-                    Value: .webp
-                  - Name: suffix
-                    Value: .gif
       Environment:
         Variables:
           BUCKET_NAME: !Ref BucketName

@@ -141,6 +141,29 @@ The lambda can optionally send webhook notifications after processing images.
 - Retry logic: 3 attempts with exponential backoff
 - 30-second timeout per request
 
+## Manual S3 Event Configuration
+
+After deploying the Lambda function, you need to manually configure S3 event notifications **once per environment**:
+
+### Steps to Configure S3 Events
+
+1. **Go to AWS S3 Console**
+2. **Select your bucket** (e.g., DEV_BUCKET_NAME for dev environment)
+3. **Go to Properties tab** 
+4. **Scroll to Event notifications section**
+5. **Click "Create event notification"**
+6. **Configure the event:**
+   - **Name**: `image-processor-trigger`
+   - **Event types**: Check `All object create events`
+   - **Prefix**: (leave empty to process all files)
+   - **Suffix**: Add multiple suffixes: `.jpg`, `.jpeg`, `.png`, `.webp`, `.gif`
+   - **Destination**: Select `Lambda function`
+   - **Lambda function**: Choose `endless-image-processor-{environment}`
+
+7. **Save the configuration**
+
+**Note**: This configuration is permanent and only needs to be done once per environment. Future Lambda deployments will not affect this S3 event configuration.
+
 ## Troubleshooting
 
 ### Error: Bucket does not exist
