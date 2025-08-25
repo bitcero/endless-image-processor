@@ -1,5 +1,6 @@
 # Go binaries
 main
+bootstrap
 endless-image-processor
 *.exe
 *.exe~
