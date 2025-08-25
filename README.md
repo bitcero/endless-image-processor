@@ -1,60 +1,135 @@
 # Endless Image Processor
 
-Lambda AWS en Go para redimensionar imágenes automáticamente cuando se suben a S3.
+A serverless AWS Lambda function that automatically processes images uploaded to S3 buckets by creating multiple resized versions with webhook notifications.
 
-## Características
+## Features
 
-- **Formatos soportados**: JPEG, PNG, WebP, GIF
-- **Tamaños generados**: thumbnail (150px), small (400px), medium (800px), large (1200px)
-- **Trigger automático**: Se activa cuando se sube una imagen al bucket S3
-- **Mismo directorio**: Las imágenes redimensionadas se guardan en el mismo directorio que la original
+- **Automatic image processing** triggered by S3 events
+- **Multiple sizes**: Creates 4 different sizes - thumbnail (150x150), small (400x400), medium (800x800), large (1200x1200)
+- **Format support**: JPEG, PNG, WebP, and GIF formats
+- **Smart resizing**: Preserves aspect ratio and prevents upscaling
+- **High quality**: Uses Lanczos algorithm for optimal image quality
+- **Webhook notifications**: Sends processing results to configurable endpoints
+- **Secure webhooks**: HMAC-SHA256 signature validation
+- **Built with Go** for optimal performance and minimal cold starts
 
-## Estructura del proyecto
+## Project Structure
 
 ```
-├── main.go           # Función Lambda principal
-├── go.mod           # Dependencias Go
-├── template.yaml    # Template SAM para deployment
-├── Makefile         # Comandos de build y deploy
-└── README.md        # Este archivo
+├── main.go              # Main Lambda function
+├── notifier.go          # Webhook notification system
+├── go.mod              # Go dependencies
+├── template-env.yaml   # SAM template for deployment
+├── samconfig.toml      # SAM configuration
+├── .github/workflows/  # GitHub Actions deployment
+├── DEPLOYMENT.md       # Detailed deployment guide
+└── README.md          # This file
 ```
 
-## Requisitos
+## Requirements
 
 - Go 1.21+
-- AWS CLI configurado
-- SAM CLI para deployment
+- AWS CLI configured
+- GitHub repository for automated deployment
 
-## Build y Deploy
+## How It Works
 
-```bash
-# Instalar dependencias
-make init-go
+1. Image uploaded to S3 bucket
+2. S3 event triggers Lambda function
+3. Lambda validates supported format (.jpg, .jpeg, .png, .webp, .gif)
+4. Generates 4 resized versions using imaging library
+5. Saves all versions to same directory with suffixes
+6. Optionally sends webhook notification with all URLs
 
-# Build
-make build
+## Example
 
-# Deploy (primera vez - modo guiado)
-make deploy
+**Original file**: `photos/vacation/beach.jpg`
 
-# Deploy con bucket específico
-make deploy BUCKET_NAME=mi-bucket-imagenes
-```
-
-## Funcionamiento
-
-1. Se sube una imagen al bucket S3
-2. S3 trigger activa la Lambda
-3. Lambda valida que sea un formato soportado
-4. Genera 4 versiones redimensionadas
-5. Guarda todas en el mismo directorio con sufijos `_thumbnail`, `_small`, `_medium`, `_large`
-
-## Ejemplo
-
-Archivo original: `photos/vacation/beach.jpg`
-
-Archivos generados:
+**Generated files**:
 - `photos/vacation/beach_thumbnail.jpg` (150x150)
 - `photos/vacation/beach_small.jpg` (400x400) 
 - `photos/vacation/beach_medium.jpg` (800x800)
 - `photos/vacation/beach_large.jpg` (1200x1200)
+
+## Deployment
+
+This project uses **GitHub Actions for manual deployment**. No automatic deployments on push.
+
+### Quick Setup
+
+1. **Configure GitHub Secrets**:
+   - `AWS_ACCESS_KEY_ID`
+   - `AWS_SECRET_ACCESS_KEY`
+
+2. **Deploy**:
+   - Go to Actions tab in GitHub
+   - Run "Deploy Image Processor Lambda" workflow
+   - Select environment, branch, and existing S3 bucket
+   - Optionally configure webhook URL and secret
+
+### Environment Configuration
+
+| Environment | Memory | Timeout | Use Case |
+|-------------|--------|---------|----------|
+| dev         | 256MB  | 180s    | Development & testing |
+| staging     | 512MB  | 300s    | Pre-production testing |
+| prod        | 1024MB | 300s    | Production workloads |
+
+## Webhook Notifications
+
+When configured, the Lambda sends webhook notifications after processing:
+
+```json
+{
+  "event_type": "image_processed",
+  "original_file": "photos/vacation/beach.jpg",
+  "original_url": "https://bucket.s3.region.amazonaws.com/photos/vacation/beach.jpg",
+  "bucket": "my-images-bucket",
+  "processed_at": "2024-01-15T10:30:00Z",
+  "environment": "prod",
+  "total_sizes": 4,
+  "image_sizes": [
+    {
+      "name": "thumbnail",
+      "url": "https://bucket.s3.region.amazonaws.com/photos/vacation/beach_thumbnail.jpg",
+      "key": "photos/vacation/beach_thumbnail.jpg",
+      "width": 150,
+      "height": 150
+    }
+    // ... more sizes
+  ]
+}
+```
+
+## Security
+
+- **HMAC-SHA256 signatures** for webhook validation
+- **IAM roles** with minimal required permissions (S3 read/write on specific bucket)
+- **No bucket creation** - connects only to existing buckets
+- **Environment isolation** - separate Lambda functions per environment
+
+## Cost Optimization
+
+- **Pay-per-use** - only costs when processing images
+- **Memory optimized** by environment (256MB dev, 1024MB prod)
+- **Go runtime** for fast cold starts and minimal memory usage
+- **Conservative timeouts** prevent runaway costs
+
+Estimated monthly cost: $0.20 (dev) to $15 (high-volume prod)
+
+## Local Development
+
+```bash
+# Install dependencies
+go mod tidy
+
+# Build binary
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o main .
+
+# Test compilation
+go build .
+```
+
+## Documentation
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed deployment instructions and troubleshooting.
