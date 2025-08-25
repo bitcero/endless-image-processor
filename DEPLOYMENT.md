@@ -19,7 +19,7 @@ The following secrets must be configured in GitHub:
 - `PROD_BUCKET_NAME`: S3 bucket name for prod environment
 
 #### Optional Webhook Secrets
-- `DEV_WEBHOOK_URL` / `DEV_WEBHOOK_SECRET`: Dev webhook configuration
+- `DEV_WEBHOOK_URL` / `DEV_WEBHOOK_SECRET/`: Dev webhook configuration
 - `STAGING_WEBHOOK_URL` / `STAGING_WEBHOOK_SECRET`: Staging webhook configuration
 - `PROD_WEBHOOK_URL` / `PROD_WEBHOOK_SECRET`: Production webhook configuration
 
