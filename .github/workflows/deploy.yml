@@ -15,7 +15,7 @@ on:
 env:
   GO_VERSION: '1.21'
   SAM_CLI_VERSION: '1.100.0'
-  AWS_REGION: us-east-1
+  AWS_REGION: us-west-2
   AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
   AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
   DEV_WEBHOOK_URL: ${{ secrets.DEV_WEBHOOK_URL }}
