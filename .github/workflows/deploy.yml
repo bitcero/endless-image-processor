@@ -27,6 +27,7 @@ env:
   DEV_BUCKET_NAME: ${{ secrets.DEV_BUCKET_NAME }}
   STAGING_BUCKET_NAME: ${{ secrets.STAGING_BUCKET_NAME }}
   PROD_BUCKET_NAME: ${{ secrets.PROD_BUCKET_NAME }}
+  DEPLOYMENT_BUCKET_NAME: ${{ secrets.DEPLOYMENT_BUCKET_NAME }}
 
 jobs:
   deploy:
@@ -97,6 +98,7 @@ jobs:
           --template template-env.yaml \
           --no-confirm-changeset \
           --no-fail-on-empty-changeset \
+          --s3-bucket ${{ env.DEPLOYMENT_BUCKET_NAME }} \
           --stack-name endless-image-processor-${{ steps.env.outputs.ENVIRONMENT }} \
           --parameter-overrides \
             BucketName=${{ steps.env.outputs.BUCKET_NAME }} \

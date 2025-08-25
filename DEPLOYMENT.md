@@ -11,6 +11,7 @@ The following secrets must be configured in GitHub:
 #### Required Secrets
 - `AWS_ACCESS_KEY_ID`: AWS Access Key for deployment
 - `AWS_SECRET_ACCESS_KEY`: AWS Secret Access Key for deployment
+- `DEPLOYMENT_BUCKET_NAME`: S3 bucket for SAM deployment artifacts (shared across all environments)
 
 #### Environment-Specific Secrets
 - `DEV_BUCKET_NAME`: S3 bucket name for dev environment
