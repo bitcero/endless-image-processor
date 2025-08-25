@@ -57,7 +57,7 @@ Resources:
     Properties:
       FunctionName: !Ref FunctionName
       CodeUri: .
-      Handler: main
+      Handler: bootstrap
       Runtime: provided.al2023
       Architectures:
         - x86_64

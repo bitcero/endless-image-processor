@@ -1,4 +1,4 @@
-BINARY_NAME=main
+BINARY_NAME=bootstrap
 BUCKET_NAME?=my-images-bucket
 
 .PHONY: build clean deploy local-test
