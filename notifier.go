@@ -52,7 +52,7 @@ func NewNotifier() *Notifier {
 		webhookSecret: os.Getenv("WEBHOOK_SECRET"),
 		region:        os.Getenv("AWS_REGION"),
 		client: &http.Client{
-			Timeout: 30 * time.Second,
+			Timeout: 5 * time.Second,
 		},
 	}
 }
@@ -110,31 +110,16 @@ func (n *Notifier) SendImageProcessedNotification(sourceBucket, originalKey, des
 	return n.sendWebhook(payload)
 }
 
-// sendWebhook sends the webhook with retry logic
+// sendWebhook sends the webhook with single attempt and short timeout
 func (n *Notifier) sendWebhook(payload *WebhookPayload) error {
-	const maxRetries = 3
-	const baseDelay = time.Second
-
-	var lastErr error
-
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		if attempt > 0 {
-			delay := baseDelay * time.Duration(1<<(attempt-1))
-			log.Printf("Retrying webhook notification (attempt %d/%d) after %v", attempt+1, maxRetries, delay)
-			time.Sleep(delay)
-		}
-
-		err := n.sendSingleWebhook(payload)
-		if err == nil {
-			log.Printf("Webhook notification sent successfully to: %s", n.webhookURL)
-			return nil
-		}
-
-		lastErr = err
-		log.Printf("Webhook notification failed (attempt %d/%d): %v", attempt+1, maxRetries, err)
+	err := n.sendSingleWebhook(payload)
+	if err == nil {
+		log.Printf("Webhook notification sent successfully to: %s", n.webhookURL)
+		return nil
 	}
 
-	return fmt.Errorf("webhook notification failed after %d attempts: %w", maxRetries, lastErr)
+	log.Printf("Webhook notification failed: %v", err)
+	return fmt.Errorf("webhook notification failed: %w", err)
 }
 
 // sendSingleWebhook performs a single webhook attempt

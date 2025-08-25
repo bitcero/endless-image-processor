@@ -12,6 +12,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
@@ -20,6 +21,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/disintegration/imaging"
+	"golang.org/x/sync/errgroup"
 
 	_ "golang.org/x/image/webp"
 )
@@ -119,20 +121,31 @@ func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) 
 	baseName := strings.TrimSuffix(filepath.Base(key), filepath.Ext(key))
 	originalExt := filepath.Ext(key)
 
+	// Process images in parallel
+	g, gCtx := errgroup.WithContext(ctx)
+	semaphore := make(chan struct{}, runtime.NumCPU())
+	
 	for _, size := range imageSizes {
-		log.Printf("Starting resize for %s", size.Name)
-		resizedImage := ip.resizeImage(originalImage, size)
-		log.Printf("Finished resize for %s", size.Name)
-
-		newKey := filepath.Join(dir, fmt.Sprintf("%s_%s%s", baseName, size.Name, originalExt))
-
-		log.Printf("Starting upload for %s", size.Name)
-		if err := ip.uploadImage(ctx, ip.destinationBucket, newKey, resizedImage, format); err != nil {
-			return fmt.Errorf("failed to upload resized image %s: %w", newKey, err)
-		}
-		log.Printf("Finished upload for %s", size.Name)
-
-		log.Printf("Successfully created %s", newKey)
+		size := size // capture loop variable
+		semaphore <- struct{}{} // acquire semaphore
+		
+		g.Go(func() error {
+			defer func() { <-semaphore }() // release semaphore
+			
+			resizedImage := ip.resizeImage(originalImage, size)
+			newKey := filepath.Join(dir, fmt.Sprintf("%s_%s%s", baseName, size.Name, originalExt))
+			
+			if err := ip.uploadImage(gCtx, ip.destinationBucket, newKey, resizedImage, format); err != nil {
+				return fmt.Errorf("failed to upload resized image %s: %w", newKey, err)
+			}
+			
+			log.Printf("Successfully created %s", newKey)
+			return nil
+		})
+	}
+	
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
 	// Send webhook notification after all sizes are processed
