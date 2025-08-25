@@ -62,7 +62,6 @@ Resources:
           ENVIRONMENT: !Ref Environment
           WEBHOOK_URL: !Ref WebhookUrl
           WEBHOOK_SECRET: !Ref WebhookSecret
-          AWS_REGION: !Ref "AWS::Region"
       Tags:
         Environment: !Ref Environment
         Project: endless-image-processor
