@@ -56,7 +56,7 @@ jobs:
         
         case "${{ github.event.inputs.environment }}" in
           dev)
-            echo "MEMORY_SIZE=256" >> $GITHUB_OUTPUT
+            echo "MEMORY_SIZE=512" >> $GITHUB_OUTPUT
             echo "TIMEOUT=180" >> $GITHUB_OUTPUT
             echo "WEBHOOK_URL=${{ env.DEV_WEBHOOK_URL }}" >> $GITHUB_OUTPUT
             echo "WEBHOOK_SECRET=${{ env.DEV_WEBHOOK_SECRET }}" >> $GITHUB_OUTPUT
