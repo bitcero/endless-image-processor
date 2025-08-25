@@ -60,7 +60,7 @@ func (n *Notifier) IsConfigured() bool {
 }
 
 // SendImageProcessedNotification sends notification about processed image
-func (n *Notifier) SendImageProcessedNotification(bucket, originalKey string, processedSizes []ImageSize) error {
+func (n *Notifier) SendImageProcessedNotification(sourceBucket, originalKey, destinationBucket string, processedSizes []ImageSize) error {
 	if !n.IsConfigured() {
 		log.Printf("Webhook not configured, skipping notification")
 		return nil
@@ -82,7 +82,7 @@ func (n *Notifier) SendImageProcessedNotification(bucket, originalKey string, pr
 		
 		imageSize := ImageSizeInfo{
 			Name:   size.Name,
-			URL:    n.generateFileURL(bucket, processedKey),
+			URL:    n.generateFileURL(destinationBucket, processedKey),
 			Key:    processedKey,
 			Width:  size.Width,
 			Height: size.Height,
@@ -92,8 +92,8 @@ func (n *Notifier) SendImageProcessedNotification(bucket, originalKey string, pr
 
 	payload := &WebhookPayload{
 		OriginalFile: originalKey,
-		OriginalURL:  n.generateFileURL(bucket, originalKey),
-		Bucket:       bucket,
+		OriginalURL:  n.generateFileURL(sourceBucket, originalKey),
+		Bucket:       sourceBucket,
 		ProcessedAt:  time.Now().UTC().Format(time.RFC3339),
 		Environment:  os.Getenv("ENVIRONMENT"),
 		TotalSizes:   len(imageSizes),

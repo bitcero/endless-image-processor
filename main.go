@@ -10,6 +10,7 @@ import (
 	"image/png"
 	"io"
 	"log"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -24,8 +25,9 @@ import (
 )
 
 type ImageProcessor struct {
-	s3Client *s3.S3
-	notifier *Notifier
+	s3Client          *s3.S3
+	notifier          *Notifier
+	destinationBucket string
 }
 
 type ImageSize struct {
@@ -52,8 +54,9 @@ var imageSizes = []ImageSize{
 func NewImageProcessor() *ImageProcessor {
 	sess := session.Must(session.NewSession())
 	return &ImageProcessor{
-		s3Client: s3.New(sess),
-		notifier: NewNotifier(),
+		s3Client:          s3.New(sess),
+		notifier:          NewNotifier(),
+		destinationBucket: os.Getenv("DESTINATION_BUCKET"),
 	}
 }
 
@@ -95,7 +98,7 @@ func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) 
 
 		newKey := filepath.Join(dir, fmt.Sprintf("%s_%s%s", baseName, size.Name, originalExt))
 
-		if err := ip.uploadImage(ctx, bucket, newKey, resizedImage, format); err != nil {
+		if err := ip.uploadImage(ctx, ip.destinationBucket, newKey, resizedImage, format); err != nil {
 			return fmt.Errorf("failed to upload resized image %s: %w", newKey, err)
 		}
 
@@ -104,7 +107,7 @@ func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) 
 
 	// Send webhook notification after all sizes are processed
 	if ip.notifier.IsConfigured() {
-		if err := ip.notifier.SendImageProcessedNotification(bucket, key, imageSizes); err != nil {
+		if err := ip.notifier.SendImageProcessedNotification(bucket, key, ip.destinationBucket, imageSizes); err != nil {
 			log.Printf("Failed to send webhook notification: %v", err)
 			// Don't return error - image processing was successful
 		} else {
