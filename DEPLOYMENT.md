@@ -12,6 +12,16 @@ The following secrets must be configured in GitHub:
 - `AWS_ACCESS_KEY_ID`: AWS Access Key for deployment
 - `AWS_SECRET_ACCESS_KEY`: AWS Secret Access Key for deployment
 
+#### Environment-Specific Secrets
+- `DEV_BUCKET_NAME`: S3 bucket name for dev environment
+- `STAGING_BUCKET_NAME`: S3 bucket name for staging environment  
+- `PROD_BUCKET_NAME`: S3 bucket name for prod environment
+
+#### Optional Webhook Secrets
+- `DEV_WEBHOOK_URL` / `DEV_WEBHOOK_SECRET`: Dev webhook configuration
+- `STAGING_WEBHOOK_URL` / `STAGING_WEBHOOK_SECRET`: Staging webhook configuration
+- `PROD_WEBHOOK_URL` / `PROD_WEBHOOK_SECRET`: Production webhook configuration
+
 #### GitHub Configuration
 1. Go to your repository on GitHub
 2. Settings → Secrets and variables → Actions  
@@ -24,13 +34,12 @@ The following secrets must be configured in GitHub:
 2. Click on the "Actions" tab
 3. Select the workflow "Deploy Image Processor Lambda"
 4. Click "Run workflow"
-5. Fill in the required parameters:
+5. Select deployment parameters:
    - **Environment**: `dev`, `staging`, or `prod`
    - **Branch**: branch you want to deploy (e.g., `main`, `develop`, `feature/xyz`)
-   - **Bucket name**: existing S3 bucket name to connect the lambda to
-   - **Webhook URL** (optional): endpoint to receive processing notifications
-   - **Webhook secret** (optional): secret for webhook signature validation
 6. Click "Run workflow"
+
+**Note**: All environment-specific configuration (bucket names, webhook URLs) is automatically loaded from GitHub Secrets based on the selected environment.
 
 ### Environment Configuration
 

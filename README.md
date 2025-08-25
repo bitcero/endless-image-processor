@@ -62,17 +62,32 @@ This project uses **GitHub Actions for manual deployment**. No automatic deploym
 ### Quick Setup
 
 1. **Configure GitHub Secrets**:
-   - `AWS_ACCESS_KEY_ID`
-   - `AWS_SECRET_ACCESS_KEY`
+   ```
+   # AWS Credentials
+   AWS_ACCESS_KEY_ID
+   AWS_SECRET_ACCESS_KEY
+   
+   # S3 Buckets by Environment
+   DEV_BUCKET_NAME
+   STAGING_BUCKET_NAME  
+   PROD_BUCKET_NAME
+   
+   # Webhook Configuration by Environment (Optional)
+   DEV_WEBHOOK_URL
+   DEV_WEBHOOK_SECRET
+   STAGING_WEBHOOK_URL
+   STAGING_WEBHOOK_SECRET
+   PROD_WEBHOOK_URL
+   PROD_WEBHOOK_SECRET
+   ```
 
 2. **Deploy**:
    - Go to Actions tab in GitHub
    - Run "Deploy Image Processor Lambda" workflow
-   - Fill required parameters:
-     - Environment (dev/staging/prod)
-     - Branch to deploy from
-     - Existing S3 bucket name to connect to
-     - Optional: Webhook URL and secret
+   - Select only:
+     - **Environment**: dev/staging/prod
+     - **Branch**: branch to deploy from
+   - All other configuration (buckets, webhooks) is automatic per environment
 
 ### Environment Configuration
 
@@ -90,20 +105,27 @@ When configured, the Lambda sends webhook notifications after processing:
 {
   "event_type": "image_processed",
   "original_file": "photos/vacation/beach.jpg",
-  "original_url": "https://bucket.s3.region.amazonaws.com/photos/vacation/beach.jpg",
-  "bucket": "my-images-bucket",
+  "original_url": "https://my-prod-bucket.s3.us-east-1.amazonaws.com/photos/vacation/beach.jpg",
+  "bucket": "my-prod-bucket",
   "processed_at": "2024-01-15T10:30:00Z",
   "environment": "prod",
   "total_sizes": 4,
   "image_sizes": [
     {
       "name": "thumbnail",
-      "url": "https://bucket.s3.region.amazonaws.com/photos/vacation/beach_thumbnail.jpg",
+      "url": "https://my-prod-bucket.s3.us-east-1.amazonaws.com/photos/vacation/beach_thumbnail.jpg",
       "key": "photos/vacation/beach_thumbnail.jpg",
       "width": 150,
       "height": 150
+    },
+    {
+      "name": "small", 
+      "url": "https://my-prod-bucket.s3.us-east-1.amazonaws.com/photos/vacation/beach_small.jpg",
+      "key": "photos/vacation/beach_small.jpg",
+      "width": 400,
+      "height": 400
     }
-    // ... more sizes
+    // ... medium, large
   ]
 }
 ```
@@ -112,7 +134,7 @@ When configured, the Lambda sends webhook notifications after processing:
 
 - **HMAC-SHA256 signatures** for webhook validation
 - **IAM roles** with minimal required permissions (S3 read/write on specified bucket)
-- **Uses existing buckets** - no bucket creation, connects to your existing S3 buckets
+- **Uses existing buckets** - connects to pre-configured S3 buckets per environment
 - **Environment isolation** - separate Lambda functions per environment
 
 ## Cost Optimization
