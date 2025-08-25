@@ -120,13 +120,17 @@ func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) 
 	originalExt := filepath.Ext(key)
 
 	for _, size := range imageSizes {
+		log.Printf("Starting resize for %s", size.Name)
 		resizedImage := ip.resizeImage(originalImage, size)
+		log.Printf("Finished resize for %s", size.Name)
 
 		newKey := filepath.Join(dir, fmt.Sprintf("%s_%s%s", baseName, size.Name, originalExt))
 
+		log.Printf("Starting upload for %s", size.Name)
 		if err := ip.uploadImage(ctx, ip.destinationBucket, newKey, resizedImage, format); err != nil {
 			return fmt.Errorf("failed to upload resized image %s: %w", newKey, err)
 		}
+		log.Printf("Finished upload for %s", size.Name)
 
 		log.Printf("Successfully created %s", newKey)
 	}
