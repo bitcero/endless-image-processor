@@ -3,10 +3,6 @@ Transform: AWS::Serverless-2016-10-31
 Description: 'Endless Image Processor - Automatic image resizing Lambda'
 
 Parameters:
-  BucketName:
-    Type: String
-    Description: Name of the S3 bucket that will trigger the Lambda function
-    Default: endless-images-dev
 
   FunctionName:
     Type: String
@@ -58,12 +54,11 @@ Resources:
       MemorySize: !Ref MemorySize
       Policies:
         - S3ReadPolicy:
-            BucketName: !Ref BucketName
+            BucketName: "endless-*-image-*"
         - S3WritePolicy:
-            BucketName: !Ref BucketName
+            BucketName: "endless-*-image-*"
       Environment:
         Variables:
-          BUCKET_NAME: !Ref BucketName
           ENVIRONMENT: !Ref Environment
           WEBHOOK_URL: !Ref WebhookUrl
           WEBHOOK_SECRET: !Ref WebhookSecret
@@ -80,11 +75,6 @@ Outputs:
     Export:
       Name: !Sub "${AWS::StackName}-FunctionArn"
 
-  ImageBucket:
-    Description: "S3 Bucket Name"
-    Value: !Ref BucketName
-    Export:
-      Name: !Sub "${AWS::StackName}-BucketName"
 
   Environment:
     Description: "Deployment Environment"

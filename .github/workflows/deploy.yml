@@ -24,9 +24,6 @@ env:
   STAGING_WEBHOOK_SECRET: ${{ secrets.STAGING_WEBHOOK_SECRET }}
   PROD_WEBHOOK_URL: ${{ secrets.PROD_WEBHOOK_URL }}
   PROD_WEBHOOK_SECRET: ${{ secrets.PROD_WEBHOOK_SECRET }}
-  DEV_BUCKET_NAME: ${{ secrets.DEV_BUCKET_NAME }}
-  STAGING_BUCKET_NAME: ${{ secrets.STAGING_BUCKET_NAME }}
-  PROD_BUCKET_NAME: ${{ secrets.PROD_BUCKET_NAME }}
   DEPLOYMENT_BUCKET_NAME: ${{ secrets.DEPLOYMENT_BUCKET_NAME }}
 
 jobs:
@@ -61,21 +58,18 @@ jobs:
           dev)
             echo "MEMORY_SIZE=256" >> $GITHUB_OUTPUT
             echo "TIMEOUT=180" >> $GITHUB_OUTPUT
-            echo "BUCKET_NAME=${{ env.DEV_BUCKET_NAME }}" >> $GITHUB_OUTPUT
             echo "WEBHOOK_URL=${{ env.DEV_WEBHOOK_URL }}" >> $GITHUB_OUTPUT
             echo "WEBHOOK_SECRET=${{ env.DEV_WEBHOOK_SECRET }}" >> $GITHUB_OUTPUT
             ;;
           staging)
             echo "MEMORY_SIZE=512" >> $GITHUB_OUTPUT
             echo "TIMEOUT=300" >> $GITHUB_OUTPUT
-            echo "BUCKET_NAME=${{ env.STAGING_BUCKET_NAME }}" >> $GITHUB_OUTPUT
             echo "WEBHOOK_URL=${{ env.STAGING_WEBHOOK_URL }}" >> $GITHUB_OUTPUT
             echo "WEBHOOK_SECRET=${{ env.STAGING_WEBHOOK_SECRET }}" >> $GITHUB_OUTPUT
             ;;
           prod)
             echo "MEMORY_SIZE=1024" >> $GITHUB_OUTPUT
             echo "TIMEOUT=300" >> $GITHUB_OUTPUT
-            echo "BUCKET_NAME=${{ env.PROD_BUCKET_NAME }}" >> $GITHUB_OUTPUT
             echo "WEBHOOK_URL=${{ env.PROD_WEBHOOK_URL }}" >> $GITHUB_OUTPUT
             echo "WEBHOOK_SECRET=${{ env.PROD_WEBHOOK_SECRET }}" >> $GITHUB_OUTPUT
             ;;
@@ -101,7 +95,6 @@ jobs:
           --s3-bucket ${{ env.DEPLOYMENT_BUCKET_NAME }} \
           --stack-name endless-image-processor-${{ steps.env.outputs.ENVIRONMENT }} \
           --parameter-overrides \
-            BucketName=${{ steps.env.outputs.BUCKET_NAME }} \
             FunctionName=${{ steps.env.outputs.FUNCTION_NAME }} \
             MemorySize=${{ steps.env.outputs.MEMORY_SIZE }} \
             Timeout=${{ steps.env.outputs.TIMEOUT }} \
@@ -113,7 +106,6 @@ jobs:
       run: |
         echo "🚀 Deployed to ${{ steps.env.outputs.ENVIRONMENT }} environment"
         echo "📦 Function: ${{ steps.env.outputs.FUNCTION_NAME }}"
-        echo "🪣 Bucket: ${{ steps.env.outputs.BUCKET_NAME }}"
         echo "🌿 Branch: ${{ github.ref_name }}"
         echo "🌍 Region: ${{ env.AWS_REGION }}"
         echo "📊 Memory: ${{ steps.env.outputs.MEMORY_SIZE }}MB"
