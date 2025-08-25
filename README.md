@@ -19,9 +19,12 @@ A serverless AWS Lambda function that automatically processes images uploaded to
 ├── main.go              # Main Lambda function
 ├── notifier.go          # Webhook notification system
 ├── go.mod              # Go dependencies
+├── go.sum              # Go dependency checksums
 ├── template-env.yaml   # SAM template for deployment
 ├── samconfig.toml      # SAM configuration
+├── Makefile            # Build and deployment commands
 ├── .github/workflows/  # GitHub Actions deployment
+├── .gitignore          # Git ignore patterns
 ├── DEPLOYMENT.md       # Detailed deployment guide
 └── README.md          # This file
 ```
@@ -29,14 +32,15 @@ A serverless AWS Lambda function that automatically processes images uploaded to
 ## Requirements
 
 - Go 1.21+
-- AWS CLI configured
-- GitHub repository for automated deployment
+- AWS account with proper permissions
+- GitHub repository with Actions enabled
 
 ## How It Works
 
 1. Image uploaded to S3 bucket
 2. S3 event triggers Lambda function
-3. Lambda validates supported format (.jpg, .jpeg, .png, .webp, .gif)
+3. Lambda validates supported format (.jpg, .jpeg, .png, .webp, .gif)  
+   Note: WebP input supported, WebP output converted to high-quality JPEG
 4. Generates 4 resized versions using imaging library
 5. Saves all versions to same directory with suffixes
 6. Optionally sends webhook notification with all URLs
@@ -64,8 +68,11 @@ This project uses **GitHub Actions for manual deployment**. No automatic deploym
 2. **Deploy**:
    - Go to Actions tab in GitHub
    - Run "Deploy Image Processor Lambda" workflow
-   - Select environment, branch, and existing S3 bucket
-   - Optionally configure webhook URL and secret
+   - Fill required parameters:
+     - Environment (dev/staging/prod)
+     - Branch to deploy from
+     - Existing S3 bucket name to connect to
+     - Optional: Webhook URL and secret
 
 ### Environment Configuration
 
@@ -104,8 +111,8 @@ When configured, the Lambda sends webhook notifications after processing:
 ## Security
 
 - **HMAC-SHA256 signatures** for webhook validation
-- **IAM roles** with minimal required permissions (S3 read/write on specific bucket)
-- **No bucket creation** - connects only to existing buckets
+- **IAM roles** with minimal required permissions (S3 read/write on specified bucket)
+- **Uses existing buckets** - no bucket creation, connects to your existing S3 buckets
 - **Environment isolation** - separate Lambda functions per environment
 
 ## Cost Optimization
