@@ -20,7 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/disintegration/imaging"
-	
+
 	_ "golang.org/x/image/webp"
 )
 
@@ -45,10 +45,10 @@ var supportedFormats = map[string]bool{
 }
 
 var imageSizes = []ImageSize{
-	{Name: "thumbnail", Width: 150, Height: 150},
-	{Name: "small", Width: 400, Height: 400},
-	{Name: "medium", Width: 800, Height: 800},
-	{Name: "large", Width: 1200, Height: 1200},
+	{Name: "thumbnail", Width: 200, Height: 200},
+	{Name: "small", Width: 500, Height: 500},
+	{Name: "medium", Width: 900, Height: 900},
+	{Name: "large", Width: 1400, Height: 1400},
 }
 
 func NewImageProcessor() *ImageProcessor {
