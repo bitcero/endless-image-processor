@@ -45,11 +45,6 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       BucketName: !Sub "endless-kd70aga-image-formats-${Environment}"
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: false
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: false
       Tags:
         - Key: Environment
           Value: !Ref Environment
@@ -57,19 +52,6 @@ Resources:
           Value: endless-image-processor
         - Key: Purpose
           Value: processed-images
-
-  DestinationBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket: !Ref DestinationBucket
-      PolicyDocument:
-        Version: "2012-10-17"
-        Statement:
-          - Sid: "PublicReadOnlyAccess"
-            Effect: "Allow"
-            Principal: "*"
-            Action: "s3:GetObject"
-            Resource: !Sub "${DestinationBucket}/*"
   ImageProcessorFunction:
     Type: AWS::Serverless::Function
     Properties:
