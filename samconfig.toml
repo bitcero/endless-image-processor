@@ -4,7 +4,7 @@ version = 0.1
 [default.deploy.parameters]
 stack_name = "endless-image-processor"
 s3_prefix = "endless-image-processor"
-region = "us-east-1"
+region = "us-west-2"
 confirm_changeset = false
 capabilities = "CAPABILITY_IAM"
 disable_rollback = true
