@@ -34,6 +34,7 @@ type ImageSize struct {
 	Name   string
 	Width  int
 	Height int
+	Format string // "default", "square", "landscape", "portrait"
 }
 
 var supportedFormats = map[string]bool{
@@ -45,7 +46,7 @@ var supportedFormats = map[string]bool{
 }
 
 var imageSizes = []ImageSize{
-	{Name: "thumbnail", Width: 200, Height: 200},
+	{Name: "thumbnail", Width: 200, Height: 200, Format: "square"},
 	{Name: "small", Width: 500, Height: 500},
 	{Name: "medium", Width: 900, Height: 900},
 	{Name: "large", Width: 1400, Height: 1400},
@@ -83,6 +84,26 @@ func (ip *ImageProcessor) isValidImageFormat(filename string) bool {
 	return supportedFormats[ext]
 }
 
+func (ip *ImageProcessor) resizeImage(img image.Image, size ImageSize) image.Image {
+	format := size.Format
+	if format == "" {
+		format = "default"
+	}
+
+	switch format {
+	case "square":
+		return imaging.Fill(img, size.Width, size.Height, imaging.Center, imaging.Lanczos)
+	case "landscape":
+		return imaging.Resize(img, size.Width, 0, imaging.Lanczos)
+	case "portrait":
+		return imaging.Resize(img, 0, size.Height, imaging.Lanczos)
+	case "default":
+		fallthrough
+	default:
+		return imaging.Fit(img, size.Width, size.Height, imaging.Lanczos)
+	}
+}
+
 func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) error {
 	// Safety check: prevent infinite loops by ensuring source and destination buckets are different
 	if bucket == ip.destinationBucket {
@@ -99,7 +120,7 @@ func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) 
 	originalExt := filepath.Ext(key)
 
 	for _, size := range imageSizes {
-		resizedImage := imaging.Fit(originalImage, size.Width, size.Height, imaging.Lanczos)
+		resizedImage := ip.resizeImage(originalImage, size)
 
 		newKey := filepath.Join(dir, fmt.Sprintf("%s_%s%s", baseName, size.Name, originalExt))
 
