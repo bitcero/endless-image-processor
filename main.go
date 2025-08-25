@@ -178,6 +178,12 @@ func (ip *ImageProcessor) downloadImage(ctx context.Context, bucket, key string)
 	defer result.Body.Close()
 
 	// Extract metadata from S3 object
+	log.Printf("DEBUG: result.Metadata has %d keys", len(result.Metadata))
+	for k, v := range result.Metadata {
+		if v != nil {
+			log.Printf("DEBUG: metadata key='%s' value='%s'", k, *v)
+		}
+	}
 	metadata := &ImageMetadata{
 		BrandID:    getMetadataValue(result.Metadata, "x-amz-meta-brandid"),
 		EntityType: getMetadataValue(result.Metadata, "x-amz-meta-entitytype"),
