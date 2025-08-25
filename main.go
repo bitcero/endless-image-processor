@@ -92,15 +92,15 @@ func (ip *ImageProcessor) resizeImage(img image.Image, size ImageSize) image.Ima
 
 	switch format {
 	case "square":
-		return imaging.Fill(img, size.Width, size.Height, imaging.Center, imaging.Lanczos)
+		return imaging.Fill(img, size.Width, size.Height, imaging.Center, imaging.Linear)
 	case "landscape":
-		return imaging.Resize(img, size.Width, 0, imaging.Lanczos)
+		return imaging.Resize(img, size.Width, 0, imaging.Linear)
 	case "portrait":
-		return imaging.Resize(img, 0, size.Height, imaging.Lanczos)
+		return imaging.Resize(img, 0, size.Height, imaging.Linear)
 	case "default":
 		fallthrough
 	default:
-		return imaging.Fit(img, size.Width, size.Height, imaging.Lanczos)
+		return imaging.Fit(img, size.Width, size.Height, imaging.Linear)
 	}
 }
 
