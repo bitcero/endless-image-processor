@@ -179,9 +179,9 @@ func (ip *ImageProcessor) downloadImage(ctx context.Context, bucket, key string)
 
 	// Extract metadata from S3 object
 	metadata := &ImageMetadata{
-		BrandID:    getMetadataValue(result.Metadata, "brandid"),
-		EntityType: getMetadataValue(result.Metadata, "entitytype"),
-		EntityID:   getMetadataValue(result.Metadata, "entityid"),
+		BrandID:    getMetadataValue(result.Metadata, "x-amz-meta-brandid"),
+		EntityType: getMetadataValue(result.Metadata, "x-amz-meta-entitytype"),
+		EntityID:   getMetadataValue(result.Metadata, "x-amz-meta-entityid"),
 	}
 
 	data, err := io.ReadAll(result.Body)
@@ -203,6 +203,7 @@ func getMetadataValue(metadata map[string]*string, key string) string {
 	}
 	return ""
 }
+
 
 func (ip *ImageProcessor) uploadImage(ctx context.Context, bucket, key string, img image.Image, format string) error {
 	var buf bytes.Buffer
