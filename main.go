@@ -84,6 +84,11 @@ func (ip *ImageProcessor) isValidImageFormat(filename string) bool {
 }
 
 func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) error {
+	// Safety check: prevent infinite loops by ensuring source and destination buckets are different
+	if bucket == ip.destinationBucket {
+		return fmt.Errorf("source bucket (%s) and destination bucket (%s) cannot be the same to prevent infinite loops", bucket, ip.destinationBucket)
+	}
+
 	originalImage, format, err := ip.downloadImage(ctx, bucket, key)
 	if err != nil {
 		return fmt.Errorf("failed to download image: %w", err)
