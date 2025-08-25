@@ -1,0 +1,118 @@
+name: Deploy Image Processor Lambda
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+        - dev
+        - staging
+        - prod
+      branch:
+        description: 'Branch to deploy from'
+        required: true
+        default: 'main'
+        type: string
+      bucket_name:
+        description: 'Existing S3 bucket name to connect to'
+        required: true
+        type: string
+      webhook_url:
+        description: 'Webhook URL for notifications (optional)'
+        required: false
+        type: string
+      webhook_secret:
+        description: 'Webhook secret for signature validation (optional)'
+        required: false
+        type: string
+
+env:
+  GO_VERSION: '1.21'
+  SAM_CLI_VERSION: '1.100.0'
+  AWS_REGION: us-east-1
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.inputs.branch }}
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: ${{ env.GO_VERSION }}
+
+    - name: Set up Python for SAM CLI
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install SAM CLI
+      run: |
+        pip install aws-sam-cli==${{ env.SAM_CLI_VERSION }}
+
+    - name: Set environment variables
+      id: env
+      run: |
+        echo "ENVIRONMENT=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+        echo "BUCKET_NAME=${{ github.event.inputs.bucket_name }}" >> $GITHUB_OUTPUT
+        echo "FUNCTION_NAME=endless-image-processor-${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+        
+        case "${{ github.event.inputs.environment }}" in
+          dev)
+            echo "MEMORY_SIZE=256" >> $GITHUB_OUTPUT
+            echo "TIMEOUT=180" >> $GITHUB_OUTPUT
+            ;;
+          staging)
+            echo "MEMORY_SIZE=512" >> $GITHUB_OUTPUT
+            echo "TIMEOUT=300" >> $GITHUB_OUTPUT
+            ;;
+          prod)
+            echo "MEMORY_SIZE=1024" >> $GITHUB_OUTPUT
+            echo "TIMEOUT=300" >> $GITHUB_OUTPUT
+            ;;
+        esac
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Build Go binary
+      run: |
+        GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o main .
+
+    - name: Deploy with SAM
+      run: |
+        sam deploy \
+          --template template-env.yaml \
+          --no-confirm-changeset \
+          --no-fail-on-empty-changeset \
+          --stack-name endless-image-processor-${{ steps.env.outputs.ENVIRONMENT }} \
+          --parameter-overrides \
+            BucketName=${{ steps.env.outputs.BUCKET_NAME }} \
+            FunctionName=${{ steps.env.outputs.FUNCTION_NAME }} \
+            MemorySize=${{ steps.env.outputs.MEMORY_SIZE }} \
+            Timeout=${{ steps.env.outputs.TIMEOUT }} \
+            Environment=${{ steps.env.outputs.ENVIRONMENT }} \
+            WebhookUrl="${{ github.event.inputs.webhook_url }}" \
+            WebhookSecret="${{ github.event.inputs.webhook_secret }}"
+
+    - name: Output deployment info
+      run: |
+        echo "🚀 Deployed to ${{ steps.env.outputs.ENVIRONMENT }} environment"
+        echo "📦 Function: ${{ steps.env.outputs.FUNCTION_NAME }}"
+        echo "🪣 Bucket: ${{ steps.env.outputs.BUCKET_NAME }}"
+        echo "🌿 Branch: ${{ github.event.inputs.branch }}"
+        echo "🌍 Region: ${{ env.AWS_REGION }}"
+        echo "📊 Memory: ${{ steps.env.outputs.MEMORY_SIZE }}MB"

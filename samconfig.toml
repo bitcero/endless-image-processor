@@ -1,0 +1,44 @@
+version = 0.1
+
+[default.deploy]
+[default.deploy.parameters]
+stack_name = "endless-image-processor"
+s3_prefix = "endless-image-processor"
+region = "us-east-1"
+confirm_changeset = false
+capabilities = "CAPABILITY_IAM"
+disable_rollback = true
+template_file = "template-env.yaml"
+
+[develop.deploy]
+[develop.deploy.parameters]
+stack_name = "endless-image-processor-dev"
+parameter_overrides = [
+    "BucketName=endless-images-dev",
+    "FunctionName=endless-image-processor-dev",
+    "MemorySize=256",
+    "Timeout=180",
+    "Environment=dev"
+]
+
+[staging.deploy]
+[staging.deploy.parameters]
+stack_name = "endless-image-processor-staging"
+parameter_overrides = [
+    "BucketName=endless-images-staging",
+    "FunctionName=endless-image-processor-staging", 
+    "MemorySize=512",
+    "Timeout=300",
+    "Environment=staging"
+]
+
+[prod.deploy]
+[prod.deploy.parameters]
+stack_name = "endless-image-processor-prod"
+parameter_overrides = [
+    "BucketName=endless-images-prod",
+    "FunctionName=endless-image-processor-prod",
+    "MemorySize=1024", 
+    "Timeout=300",
+    "Environment=prod"
+]

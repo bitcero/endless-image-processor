@@ -1,0 +1,112 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'Endless Image Processor - Automatic image resizing Lambda'
+
+Parameters:
+  BucketName:
+    Type: String
+    Description: Name of the S3 bucket that will trigger the Lambda function
+    Default: endless-images-dev
+
+  FunctionName:
+    Type: String
+    Description: Lambda function name
+    Default: endless-image-processor-dev
+
+  MemorySize:
+    Type: Number
+    Description: Lambda memory size in MB
+    Default: 256
+    MinValue: 128
+    MaxValue: 3008
+
+  Timeout:
+    Type: Number
+    Description: Lambda timeout in seconds
+    Default: 180
+    MinValue: 1
+    MaxValue: 900
+
+  Environment:
+    Type: String
+    Description: Deployment environment
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+
+  WebhookUrl:
+    Type: String
+    Description: Webhook URL for notifications (optional)
+    Default: ""
+
+  WebhookSecret:
+    Type: String
+    Description: Webhook secret for signature validation (optional)
+    Default: ""
+    NoEcho: true
+
+Resources:
+  ImageProcessorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Ref FunctionName
+      CodeUri: .
+      Handler: main
+      Runtime: provided.al2023
+      Architectures:
+        - x86_64
+      Timeout: !Ref Timeout
+      MemorySize: !Ref MemorySize
+      Policies:
+        - S3ReadPolicy:
+            BucketName: !Ref BucketName
+        - S3WritePolicy:
+            BucketName: !Ref BucketName
+      Events:
+        S3Event:
+          Type: S3
+          Properties:
+            Bucket: !Ref BucketName
+            Events: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: suffix
+                    Value: .jpg
+                  - Name: suffix
+                    Value: .jpeg
+                  - Name: suffix
+                    Value: .png
+                  - Name: suffix
+                    Value: .webp
+                  - Name: suffix
+                    Value: .gif
+      Environment:
+        Variables:
+          BUCKET_NAME: !Ref BucketName
+          ENVIRONMENT: !Ref Environment
+          WEBHOOK_URL: !Ref WebhookUrl
+          WEBHOOK_SECRET: !Ref WebhookSecret
+          AWS_REGION: !Ref "AWS::Region"
+      Tags:
+        Environment: !Ref Environment
+        Project: endless-image-processor
+
+
+Outputs:
+  ImageProcessorFunction:
+    Description: "Image Processor Lambda Function ARN"
+    Value: !GetAtt ImageProcessorFunction.Arn
+    Export:
+      Name: !Sub "${AWS::StackName}-FunctionArn"
+
+  ImageBucket:
+    Description: "S3 Bucket Name"
+    Value: !Ref BucketName
+    Export:
+      Name: !Sub "${AWS::StackName}-BucketName"
+
+  Environment:
+    Description: "Deployment Environment"
+    Value: !Ref Environment
+    Export:
+      Name: !Sub "${AWS::StackName}-Environment"

@@ -1,0 +1,81 @@
+# Go binaries
+main
+endless-image-processor
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Go test files
+*.test
+*.out
+
+# Go coverage files
+coverage.out
+coverage.html
+
+# Go vendor directory
+vendor/
+
+# Go module cache (local development)
+go.sum.lock
+
+# AWS SAM
+.aws-sam/
+samconfig.toml.bak
+
+# CloudFormation packaged templates
+packaged-template.yaml
+packaged-template.yml
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# macOS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Build artifacts
+dist/
+build/
+
+# AWS credentials (security)
+credentials
+config
+.aws/
+
+# Backup files
+*.bak
+*.backup

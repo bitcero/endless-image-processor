@@ -1,0 +1,185 @@
+package main
+
+import (
+	"bytes"
+	"context"
+	"fmt"
+	"image"
+	"image/gif"
+	"image/jpeg"
+	"image/png"
+	"io"
+	"log"
+	"path/filepath"
+	"strings"
+
+	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/disintegration/imaging"
+	
+	_ "golang.org/x/image/webp"
+)
+
+type ImageProcessor struct {
+	s3Client *s3.S3
+	notifier *Notifier
+}
+
+type ImageSize struct {
+	Name   string
+	Width  int
+	Height int
+}
+
+var supportedFormats = map[string]bool{
+	".jpg":  true,
+	".jpeg": true,
+	".png":  true,
+	".webp": true,
+	".gif":  true,
+}
+
+var imageSizes = []ImageSize{
+	{Name: "thumbnail", Width: 150, Height: 150},
+	{Name: "small", Width: 400, Height: 400},
+	{Name: "medium", Width: 800, Height: 800},
+	{Name: "large", Width: 1200, Height: 1200},
+}
+
+func NewImageProcessor() *ImageProcessor {
+	sess := session.Must(session.NewSession())
+	return &ImageProcessor{
+		s3Client: s3.New(sess),
+		notifier: NewNotifier(),
+	}
+}
+
+func (ip *ImageProcessor) HandleS3Event(ctx context.Context, s3Event events.S3Event) error {
+	for _, record := range s3Event.Records {
+		bucketName := record.S3.Bucket.Name
+		objectKey := record.S3.Object.Key
+
+		if !ip.isValidImageFormat(objectKey) {
+			log.Printf("Skipping non-image file: %s", objectKey)
+			continue
+		}
+
+		if err := ip.processImage(ctx, bucketName, objectKey); err != nil {
+			log.Printf("Error processing image %s: %v", objectKey, err)
+			return err
+		}
+	}
+	return nil
+}
+
+func (ip *ImageProcessor) isValidImageFormat(filename string) bool {
+	ext := strings.ToLower(filepath.Ext(filename))
+	return supportedFormats[ext]
+}
+
+func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) error {
+	originalImage, format, err := ip.downloadImage(ctx, bucket, key)
+	if err != nil {
+		return fmt.Errorf("failed to download image: %w", err)
+	}
+
+	dir := filepath.Dir(key)
+	baseName := strings.TrimSuffix(filepath.Base(key), filepath.Ext(key))
+	originalExt := filepath.Ext(key)
+
+	for _, size := range imageSizes {
+		resizedImage := imaging.Fit(originalImage, size.Width, size.Height, imaging.Lanczos)
+
+		newKey := filepath.Join(dir, fmt.Sprintf("%s_%s%s", baseName, size.Name, originalExt))
+
+		if err := ip.uploadImage(ctx, bucket, newKey, resizedImage, format); err != nil {
+			return fmt.Errorf("failed to upload resized image %s: %w", newKey, err)
+		}
+
+		log.Printf("Successfully created %s", newKey)
+	}
+
+	// Send webhook notification after all sizes are processed
+	if ip.notifier.IsConfigured() {
+		if err := ip.notifier.SendImageProcessedNotification(bucket, key, imageSizes); err != nil {
+			log.Printf("Failed to send webhook notification: %v", err)
+			// Don't return error - image processing was successful
+		} else {
+			log.Printf("Webhook notification sent successfully for %s", key)
+		}
+	}
+
+	return nil
+}
+
+func (ip *ImageProcessor) downloadImage(ctx context.Context, bucket, key string) (image.Image, string, error) {
+	result, err := ip.s3Client.GetObjectWithContext(ctx, &s3.GetObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return nil, "", err
+	}
+	defer result.Body.Close()
+
+	data, err := io.ReadAll(result.Body)
+	if err != nil {
+		return nil, "", err
+	}
+
+	img, format, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
+		return nil, "", fmt.Errorf("failed to decode image: %w", err)
+	}
+
+	return img, format, nil
+}
+
+func (ip *ImageProcessor) uploadImage(ctx context.Context, bucket, key string, img image.Image, format string) error {
+	var buf bytes.Buffer
+	var contentType string
+
+	switch format {
+	case "jpeg":
+		if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 85}); err != nil {
+			return err
+		}
+		contentType = "image/jpeg"
+	case "png":
+		if err := png.Encode(&buf, img); err != nil {
+			return err
+		}
+		contentType = "image/png"
+	case "webp":
+		// For WebP output, convert to JPEG with high quality
+		// This is a reasonable fallback since WebP encoding requires CGO
+		if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 90}); err != nil {
+			return err
+		}
+		contentType = "image/jpeg"
+	case "gif":
+		if err := gif.Encode(&buf, img, nil); err != nil {
+			return err
+		}
+		contentType = "image/gif"
+	default:
+		return fmt.Errorf("unsupported format: %s", format)
+	}
+
+	_, err := ip.s3Client.PutObjectWithContext(ctx, &s3.PutObjectInput{
+		Bucket:      aws.String(bucket),
+		Key:         aws.String(key),
+		Body:        bytes.NewReader(buf.Bytes()),
+		ContentType: aws.String(contentType),
+	})
+
+	return err
+}
+
+func main() {
+	processor := NewImageProcessor()
+	lambda.Start(processor.HandleS3Event)
+}
