@@ -30,8 +30,11 @@ type WebhookPayload struct {
 	ProcessedAt   string          `json:"processed_at"`   // timestamp
 	Environment   string          `json:"environment"`    // deployment environment
 	TotalSizes    int             `json:"total_sizes"`    // number of sizes created
-	ImageSizes    []ImageSizeInfo `json:"image_sizes"`    // array of processed sizes
+	VariantTypes  []ImageSizeInfo `json:"variant_types"`  // array of processed sizes
 	EventType     string          `json:"event_type"`     // always "image_processed"
+	BrandID       string          `json:"brand_id"`       // brand identifier from metadata
+	EntityType    string          `json:"entity_type"`    // entity type from metadata
+	EntityID      string          `json:"entity_id"`      // entity identifier from metadata
 }
 
 // Notifier handles webhook notifications
@@ -60,7 +63,7 @@ func (n *Notifier) IsConfigured() bool {
 }
 
 // SendImageProcessedNotification sends notification about processed image
-func (n *Notifier) SendImageProcessedNotification(sourceBucket, originalKey, destinationBucket string, processedSizes []ImageSize) error {
+func (n *Notifier) SendImageProcessedNotification(sourceBucket, originalKey, destinationBucket string, processedSizes []ImageSize, brandID, entityType, entityID string) error {
 	if !n.IsConfigured() {
 		log.Printf("Webhook not configured, skipping notification")
 		return nil
@@ -97,8 +100,11 @@ func (n *Notifier) SendImageProcessedNotification(sourceBucket, originalKey, des
 		ProcessedAt:  time.Now().UTC().Format(time.RFC3339),
 		Environment:  os.Getenv("ENVIRONMENT"),
 		TotalSizes:   len(imageSizes),
-		ImageSizes:   imageSizes,
+		VariantTypes: imageSizes,
 		EventType:    "image_processed",
+		BrandID:      brandID,
+		EntityType:   entityType,
+		EntityID:     entityID,
 	}
 
 	return n.sendWebhook(payload)

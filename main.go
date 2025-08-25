@@ -89,7 +89,7 @@ func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) 
 		return fmt.Errorf("source bucket (%s) and destination bucket (%s) cannot be the same to prevent infinite loops", bucket, ip.destinationBucket)
 	}
 
-	originalImage, format, err := ip.downloadImage(ctx, bucket, key)
+	originalImage, format, metadata, err := ip.downloadImage(ctx, bucket, key)
 	if err != nil {
 		return fmt.Errorf("failed to download image: %w", err)
 	}
@@ -112,7 +112,7 @@ func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) 
 
 	// Send webhook notification after all sizes are processed
 	if ip.notifier.IsConfigured() {
-		if err := ip.notifier.SendImageProcessedNotification(bucket, key, ip.destinationBucket, imageSizes); err != nil {
+		if err := ip.notifier.SendImageProcessedNotification(bucket, key, ip.destinationBucket, imageSizes, metadata.BrandID, metadata.EntityType, metadata.EntityID); err != nil {
 			log.Printf("Failed to send webhook notification: %v", err)
 			// Don't return error - image processing was successful
 		} else {
@@ -123,27 +123,47 @@ func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) 
 	return nil
 }
 
-func (ip *ImageProcessor) downloadImage(ctx context.Context, bucket, key string) (image.Image, string, error) {
+type ImageMetadata struct {
+	BrandID    string
+	EntityType string
+	EntityID   string
+}
+
+func (ip *ImageProcessor) downloadImage(ctx context.Context, bucket, key string) (image.Image, string, *ImageMetadata, error) {
 	result, err := ip.s3Client.GetObjectWithContext(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(bucket),
 		Key:    aws.String(key),
 	})
 	if err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 	defer result.Body.Close()
 
+	// Extract metadata from S3 object
+	metadata := &ImageMetadata{
+		BrandID:    getMetadataValue(result.Metadata, "brandid"),
+		EntityType: getMetadataValue(result.Metadata, "entitytype"),
+		EntityID:   getMetadataValue(result.Metadata, "entityid"),
+	}
+
 	data, err := io.ReadAll(result.Body)
 	if err != nil {
-		return nil, "", err
+		return nil, "", nil, err
 	}
 
 	img, format, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to decode image: %w", err)
+		return nil, "", nil, fmt.Errorf("failed to decode image: %w", err)
 	}
 
-	return img, format, nil
+	return img, format, metadata, nil
+}
+
+func getMetadataValue(metadata map[string]*string, key string) string {
+	if value, exists := metadata[key]; exists && value != nil {
+		return *value
+	}
+	return ""
 }
 
 func (ip *ImageProcessor) uploadImage(ctx context.Context, bucket, key string, img image.Image, format string) error {
