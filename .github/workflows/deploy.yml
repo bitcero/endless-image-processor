@@ -17,23 +17,21 @@ on:
         required: true
         default: 'main'
         type: string
-      bucket_name:
-        description: 'Existing S3 bucket name to connect to'
-        required: true
-        type: string
-      webhook_url:
-        description: 'Webhook URL for notifications (optional)'
-        required: false
-        type: string
-      webhook_secret:
-        description: 'Webhook secret for signature validation (optional)'
-        required: false
-        type: string
-
 env:
   GO_VERSION: '1.21'
   SAM_CLI_VERSION: '1.100.0'
   AWS_REGION: us-east-1
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  DEV_WEBHOOK_URL: ${{ secrets.DEV_WEBHOOK_URL }}
+  DEV_WEBHOOK_SECRET: ${{ secrets.DEV_WEBHOOK_SECRET }}
+  STAGING_WEBHOOK_URL: ${{ secrets.STAGING_WEBHOOK_URL }}
+  STAGING_WEBHOOK_SECRET: ${{ secrets.STAGING_WEBHOOK_SECRET }}
+  PROD_WEBHOOK_URL: ${{ secrets.PROD_WEBHOOK_URL }}
+  PROD_WEBHOOK_SECRET: ${{ secrets.PROD_WEBHOOK_SECRET }}
+  DEV_BUCKET_NAME: ${{ secrets.DEV_BUCKET_NAME }}
+  STAGING_BUCKET_NAME: ${{ secrets.STAGING_BUCKET_NAME }}
+  PROD_BUCKET_NAME: ${{ secrets.PROD_BUCKET_NAME }}
 
 jobs:
   deploy:
@@ -63,29 +61,37 @@ jobs:
       id: env
       run: |
         echo "ENVIRONMENT=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
-        echo "BUCKET_NAME=${{ github.event.inputs.bucket_name }}" >> $GITHUB_OUTPUT
         echo "FUNCTION_NAME=endless-image-processor-${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
         
         case "${{ github.event.inputs.environment }}" in
           dev)
             echo "MEMORY_SIZE=256" >> $GITHUB_OUTPUT
             echo "TIMEOUT=180" >> $GITHUB_OUTPUT
+            echo "BUCKET_NAME=${{ env.DEV_BUCKET_NAME }}" >> $GITHUB_OUTPUT
+            echo "WEBHOOK_URL=${{ env.DEV_WEBHOOK_URL }}" >> $GITHUB_OUTPUT
+            echo "WEBHOOK_SECRET=${{ env.DEV_WEBHOOK_SECRET }}" >> $GITHUB_OUTPUT
             ;;
           staging)
             echo "MEMORY_SIZE=512" >> $GITHUB_OUTPUT
             echo "TIMEOUT=300" >> $GITHUB_OUTPUT
+            echo "BUCKET_NAME=${{ env.STAGING_BUCKET_NAME }}" >> $GITHUB_OUTPUT
+            echo "WEBHOOK_URL=${{ env.STAGING_WEBHOOK_URL }}" >> $GITHUB_OUTPUT
+            echo "WEBHOOK_SECRET=${{ env.STAGING_WEBHOOK_SECRET }}" >> $GITHUB_OUTPUT
             ;;
           prod)
             echo "MEMORY_SIZE=1024" >> $GITHUB_OUTPUT
             echo "TIMEOUT=300" >> $GITHUB_OUTPUT
+            echo "BUCKET_NAME=${{ env.PROD_BUCKET_NAME }}" >> $GITHUB_OUTPUT
+            echo "WEBHOOK_URL=${{ env.PROD_WEBHOOK_URL }}" >> $GITHUB_OUTPUT
+            echo "WEBHOOK_SECRET=${{ env.PROD_WEBHOOK_SECRET }}" >> $GITHUB_OUTPUT
             ;;
         esac
 
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-access-key-id: ${{ env.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ env.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
     - name: Build Go binary
@@ -105,8 +111,8 @@ jobs:
             MemorySize=${{ steps.env.outputs.MEMORY_SIZE }} \
             Timeout=${{ steps.env.outputs.TIMEOUT }} \
             Environment=${{ steps.env.outputs.ENVIRONMENT }} \
-            WebhookUrl="${{ github.event.inputs.webhook_url }}" \
-            WebhookSecret="${{ github.event.inputs.webhook_secret }}"
+            WebhookUrl="${{ steps.env.outputs.WEBHOOK_URL }}" \
+            WebhookSecret="${{ steps.env.outputs.WEBHOOK_SECRET }}"
 
     - name: Output deployment info
       run: |
