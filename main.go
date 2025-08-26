@@ -150,7 +150,7 @@ func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) 
 
 	// Send webhook notification after all sizes are processed
 	if ip.notifier.IsConfigured() {
-		if err := ip.notifier.SendImageProcessedNotification(bucket, key, ip.destinationBucket, imageSizes, metadata.BrandID, metadata.EntityType, metadata.EntityID); err != nil {
+		if err := ip.notifier.SendImageProcessedNotification(bucket, key, ip.destinationBucket, imageSizes, metadata.BrandID, metadata.EntityType, metadata.EntityID, metadata.RequestedBy); err != nil {
 			log.Printf("Failed to send webhook notification: %v", err)
 			// Don't return error - image processing was successful
 		} else {
@@ -162,9 +162,10 @@ func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) 
 }
 
 type ImageMetadata struct {
-	BrandID    string
-	EntityType string
-	EntityID   string
+	BrandID     string
+	EntityType  string
+	EntityID    string
+	RequestedBy string
 }
 
 func (ip *ImageProcessor) downloadImage(ctx context.Context, bucket, key string) (image.Image, string, *ImageMetadata, error) {
@@ -179,9 +180,10 @@ func (ip *ImageProcessor) downloadImage(ctx context.Context, bucket, key string)
 
 	// Extract metadata from S3 object
 	metadata := &ImageMetadata{
-		BrandID:    getMetadataValue(result.Metadata, "Brandid"),
-		EntityType: getMetadataValue(result.Metadata, "Entitytype"),
-		EntityID:   getMetadataValue(result.Metadata, "Entityid"),
+		BrandID:     getMetadataValue(result.Metadata, "Brandid"),
+		EntityType:  getMetadataValue(result.Metadata, "Entitytype"),
+		EntityID:    getMetadataValue(result.Metadata, "Entityid"),
+		RequestedBy: getMetadataValue(result.Metadata, "Requestedby"),
 	}
 
 	data, err := io.ReadAll(result.Body)

@@ -35,6 +35,7 @@ type WebhookPayload struct {
 	BrandID       string          `json:"brand_id"`       // brand identifier from metadata
 	EntityType    string          `json:"entity_type"`    // entity type from metadata
 	EntityID      string          `json:"entity_id"`      // entity identifier from metadata
+	RequestedBy   string          `json:"requested_by"`   // requester from metadata
 }
 
 // Notifier handles webhook notifications
@@ -63,7 +64,7 @@ func (n *Notifier) IsConfigured() bool {
 }
 
 // SendImageProcessedNotification sends notification about processed image
-func (n *Notifier) SendImageProcessedNotification(sourceBucket, originalKey, destinationBucket string, processedSizes []ImageSize, brandID, entityType, entityID string) error {
+func (n *Notifier) SendImageProcessedNotification(sourceBucket, originalKey, destinationBucket string, processedSizes []ImageSize, brandID, entityType, entityID, requestedBy string) error {
 	if !n.IsConfigured() {
 		log.Printf("Webhook not configured, skipping notification")
 		return nil
@@ -105,6 +106,7 @@ func (n *Notifier) SendImageProcessedNotification(sourceBucket, originalKey, des
 		BrandID:      brandID,
 		EntityType:   entityType,
 		EntityID:     entityID,
+		RequestedBy:  requestedBy,
 	}
 
 	return n.sendWebhook(payload)
