@@ -117,6 +117,11 @@ func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) 
 		return fmt.Errorf("failed to download image: %w", err)
 	}
 
+	isReplacement := false
+	if metadata.ExistingFile != "" {
+		isReplacement = true
+	}
+
 	dir := filepath.Dir(key)
 	baseName := strings.TrimSuffix(filepath.Base(key), filepath.Ext(key))
 	originalExt := filepath.Ext(key)
@@ -150,7 +155,7 @@ func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) 
 
 	// Send webhook notification after all sizes are processed
 	if ip.notifier.IsConfigured() {
-		if err := ip.notifier.SendImageProcessedNotification(bucket, key, ip.destinationBucket, imageSizes, metadata.BrandID, metadata.EntityType, metadata.EntityID, metadata.RequestedBy); err != nil {
+		if err := ip.notifier.SendImageProcessedNotification(bucket, key, ip.destinationBucket, imageSizes, metadata.BrandID, metadata.EntityType, metadata.EntityID, metadata.RequestedBy, isReplacement); err != nil {
 			log.Printf("Failed to send webhook notification: %v", err)
 			// Don't return error - image processing was successful
 		} else {
@@ -166,6 +171,7 @@ type ImageMetadata struct {
 	EntityType  string
 	EntityID    string
 	RequestedBy string
+	ExistingFile string
 }
 
 func (ip *ImageProcessor) downloadImage(ctx context.Context, bucket, key string) (image.Image, string, *ImageMetadata, error) {
@@ -184,6 +190,7 @@ func (ip *ImageProcessor) downloadImage(ctx context.Context, bucket, key string)
 		EntityType:  getMetadataValue(result.Metadata, "Entitytype"),
 		EntityID:    getMetadataValue(result.Metadata, "Entityid"),
 		RequestedBy: getMetadataValue(result.Metadata, "Requestedby"),
+		ExistingFile: getMetadataValue(result.Metadata, "Existingfile"),
 	}
 
 	data, err := io.ReadAll(result.Body)
