@@ -184,14 +184,13 @@ func (ip *ImageProcessor) downloadImage(ctx context.Context, bucket, key string)
 	}
 	defer result.Body.Close()
 
-	log.Printf("METADATA: %+v", result.Metadata)
 	// Extract metadata from S3 object
 	metadata := &ImageMetadata{
 		BrandID:      getMetadataValue(result.Metadata, "Brandid"),
 		EntityType:   getMetadataValue(result.Metadata, "Entitytype"),
 		EntityID:     getMetadataValue(result.Metadata, "Entityid"),
 		RequestedBy:  getMetadataValue(result.Metadata, "Requestedby"),
-		ExistingFile: getMetadataValue(result.Metadata, "Existingfile"),
+		ExistingFile: getMetadataValue(result.Metadata, "Existing_file"),
 	}
 
 	data, err := io.ReadAll(result.Body)
