@@ -36,7 +36,7 @@ type WebhookPayload struct {
 	EntityType    string          `json:"entity_type"`    // entity type from metadata
 	EntityID      string          `json:"entity_id"`      // entity identifier from metadata
 	RequestedBy   string          `json:"requested_by"`   // requester from metadata
-	IsReplacement bool            `json:"is_replacement"`
+	IsReplacement bool            `json:"is_replacement"` // whether this was a replacement
 }
 
 // Notifier handles webhook notifications
@@ -73,18 +73,18 @@ func (n *Notifier) SendImageProcessedNotification(sourceBucket, originalKey, des
 
 	// Build image sizes info
 	imageSizes := make([]ImageSizeInfo, 0, len(processedSizes))
-	
+
 	for _, size := range processedSizes {
 		// Generate the processed file key (following same pattern as main.go)
 		dir := getFileDir(originalKey)
 		baseName := getFileBaseName(originalKey)
 		ext := getFileExt(originalKey)
-		
+
 		processedKey := fmt.Sprintf("%s/%s_%s%s", dir, baseName, size.Name, ext)
 		if dir == "" {
 			processedKey = fmt.Sprintf("%s_%s%s", baseName, size.Name, ext)
 		}
-		
+
 		imageSize := ImageSizeInfo{
 			Name:   size.Name,
 			URL:    n.generateFileURL(destinationBucket, processedKey),
@@ -162,11 +162,11 @@ func (n *Notifier) calculateSignature(jsonData []byte) string {
 	if n.webhookSecret == "" {
 		return ""
 	}
-	
+
 	mac := hmac.New(sha256.New, []byte(n.webhookSecret))
 	mac.Write(jsonData)
 	signature := hex.EncodeToString(mac.Sum(nil))
-	
+
 	return "sha256=" + signature
 }
 
@@ -203,12 +203,12 @@ func getFileBaseName(key string) string {
 			break
 		}
 	}
-	
+
 	filename := key
 	if lastSlash != -1 {
 		filename = key[lastSlash+1:]
 	}
-	
+
 	// Remove extension
 	lastDot := -1
 	for i := len(filename) - 1; i >= 0; i-- {
@@ -217,7 +217,7 @@ func getFileBaseName(key string) string {
 			break
 		}
 	}
-	
+
 	if lastDot == -1 {
 		return filename
 	}
@@ -235,7 +235,7 @@ func getFileExt(key string) string {
 			break
 		}
 	}
-	
+
 	if lastDot == -1 {
 		return ""
 	}
