@@ -129,26 +129,26 @@ func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) 
 	// Process images in parallel
 	g, gCtx := errgroup.WithContext(ctx)
 	semaphore := make(chan struct{}, runtime.NumCPU())
-	
+
 	for _, size := range imageSizes {
-		size := size // capture loop variable
+		size := size            // capture loop variable
 		semaphore <- struct{}{} // acquire semaphore
-		
+
 		g.Go(func() error {
 			defer func() { <-semaphore }() // release semaphore
-			
+
 			resizedImage := ip.resizeImage(originalImage, size)
 			newKey := filepath.Join(dir, fmt.Sprintf("%s_%s%s", baseName, size.Name, originalExt))
-			
+
 			if err := ip.uploadImage(gCtx, ip.destinationBucket, newKey, resizedImage, format); err != nil {
 				return fmt.Errorf("failed to upload resized image %s: %w", newKey, err)
 			}
-			
+
 			log.Printf("Successfully created %s", newKey)
 			return nil
 		})
 	}
-	
+
 	if err := g.Wait(); err != nil {
 		return err
 	}
@@ -167,10 +167,10 @@ func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) 
 }
 
 type ImageMetadata struct {
-	BrandID     string
-	EntityType  string
-	EntityID    string
-	RequestedBy string
+	BrandID      string
+	EntityType   string
+	EntityID     string
+	RequestedBy  string
 	ExistingFile string
 }
 
@@ -184,12 +184,13 @@ func (ip *ImageProcessor) downloadImage(ctx context.Context, bucket, key string)
 	}
 	defer result.Body.Close()
 
+	log.Printf("METADATA: %+v", result.Metadata)
 	// Extract metadata from S3 object
 	metadata := &ImageMetadata{
-		BrandID:     getMetadataValue(result.Metadata, "Brandid"),
-		EntityType:  getMetadataValue(result.Metadata, "Entitytype"),
-		EntityID:    getMetadataValue(result.Metadata, "Entityid"),
-		RequestedBy: getMetadataValue(result.Metadata, "Requestedby"),
+		BrandID:      getMetadataValue(result.Metadata, "Brandid"),
+		EntityType:   getMetadataValue(result.Metadata, "Entitytype"),
+		EntityID:     getMetadataValue(result.Metadata, "Entityid"),
+		RequestedBy:  getMetadataValue(result.Metadata, "Requestedby"),
 		ExistingFile: getMetadataValue(result.Metadata, "Existingfile"),
 	}
 
@@ -212,7 +213,6 @@ func getMetadataValue(metadata map[string]*string, key string) string {
 	}
 	return ""
 }
-
 
 func (ip *ImageProcessor) uploadImage(ctx context.Context, bucket, key string, img image.Image, format string) error {
 	var buf bytes.Buffer
