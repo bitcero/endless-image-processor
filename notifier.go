@@ -96,19 +96,19 @@ func (n *Notifier) SendImageProcessedNotification(sourceBucket, originalKey, des
 	}
 
 	payload := &WebhookPayload{
-		OriginalFile: originalKey,
-		OriginalURL:  n.generateFileURL(sourceBucket, originalKey),
-		Bucket:       sourceBucket,
-		ProcessedAt:  time.Now().UTC().Format(time.RFC3339),
-		Environment:  os.Getenv("ENVIRONMENT"),
-		TotalSizes:   len(imageSizes),
-		VariantTypes: imageSizes,
-		EventType:    "image_processed",
-		BrandID:      brandID,
-		EntityType:   entityType,
-		EntityID:     entityID,
-		RequestedBy:  requestedBy,
-		IsReplacement: isReplacement
+		OriginalFile:  originalKey,
+		OriginalURL:   n.generateFileURL(sourceBucket, originalKey),
+		Bucket:        sourceBucket,
+		ProcessedAt:   time.Now().UTC().Format(time.RFC3339),
+		Environment:   os.Getenv("ENVIRONMENT"),
+		TotalSizes:    len(imageSizes),
+		VariantTypes:  imageSizes,
+		EventType:     "image_processed",
+		BrandID:       brandID,
+		EntityType:    entityType,
+		EntityID:      entityID,
+		RequestedBy:   requestedBy,
+		IsReplacement: isReplacement,
 	}
 
 	return n.sendWebhook(payload)
