@@ -117,6 +117,11 @@ func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) 
 		return fmt.Errorf("failed to download image: %w", err)
 	}
 
+	isReplacement := false
+	if metadata.ExistingFile != "" {
+		isReplacement = true
+	}
+
 	dir := filepath.Dir(key)
 	baseName := strings.TrimSuffix(filepath.Base(key), filepath.Ext(key))
 	originalExt := filepath.Ext(key)
@@ -124,33 +129,33 @@ func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) 
 	// Process images in parallel
 	g, gCtx := errgroup.WithContext(ctx)
 	semaphore := make(chan struct{}, runtime.NumCPU())
-	
+
 	for _, size := range imageSizes {
-		size := size // capture loop variable
+		size := size            // capture loop variable
 		semaphore <- struct{}{} // acquire semaphore
-		
+
 		g.Go(func() error {
 			defer func() { <-semaphore }() // release semaphore
-			
+
 			resizedImage := ip.resizeImage(originalImage, size)
 			newKey := filepath.Join(dir, fmt.Sprintf("%s_%s%s", baseName, size.Name, originalExt))
-			
+
 			if err := ip.uploadImage(gCtx, ip.destinationBucket, newKey, resizedImage, format); err != nil {
 				return fmt.Errorf("failed to upload resized image %s: %w", newKey, err)
 			}
-			
+
 			log.Printf("Successfully created %s", newKey)
 			return nil
 		})
 	}
-	
+
 	if err := g.Wait(); err != nil {
 		return err
 	}
 
 	// Send webhook notification after all sizes are processed
 	if ip.notifier.IsConfigured() {
-		if err := ip.notifier.SendImageProcessedNotification(bucket, key, ip.destinationBucket, imageSizes, metadata.BrandID, metadata.EntityType, metadata.EntityID, metadata.RequestedBy); err != nil {
+		if err := ip.notifier.SendImageProcessedNotification(bucket, key, ip.destinationBucket, imageSizes, metadata.BrandID, metadata.EntityType, metadata.EntityID, metadata.RequestedBy, isReplacement); err != nil {
 			log.Printf("Failed to send webhook notification: %v", err)
 			// Don't return error - image processing was successful
 		} else {
@@ -162,10 +167,11 @@ func (ip *ImageProcessor) processImage(ctx context.Context, bucket, key string) 
 }
 
 type ImageMetadata struct {
-	BrandID     string
-	EntityType  string
-	EntityID    string
-	RequestedBy string
+	BrandID      string
+	EntityType   string
+	EntityID     string
+	RequestedBy  string
+	ExistingFile string
 }
 
 func (ip *ImageProcessor) downloadImage(ctx context.Context, bucket, key string) (image.Image, string, *ImageMetadata, error) {
@@ -180,10 +186,11 @@ func (ip *ImageProcessor) downloadImage(ctx context.Context, bucket, key string)
 
 	// Extract metadata from S3 object
 	metadata := &ImageMetadata{
-		BrandID:     getMetadataValue(result.Metadata, "Brandid"),
-		EntityType:  getMetadataValue(result.Metadata, "Entitytype"),
-		EntityID:    getMetadataValue(result.Metadata, "Entityid"),
-		RequestedBy: getMetadataValue(result.Metadata, "Requestedby"),
+		BrandID:      getMetadataValue(result.Metadata, "Brandid"),
+		EntityType:   getMetadataValue(result.Metadata, "Entitytype"),
+		EntityID:     getMetadataValue(result.Metadata, "Entityid"),
+		RequestedBy:  getMetadataValue(result.Metadata, "Requestedby"),
+		ExistingFile: getMetadataValue(result.Metadata, "Existing_file"),
 	}
 
 	data, err := io.ReadAll(result.Body)
@@ -205,7 +212,6 @@ func getMetadataValue(metadata map[string]*string, key string) string {
 	}
 	return ""
 }
-
 
 func (ip *ImageProcessor) uploadImage(ctx context.Context, bucket, key string, img image.Image, format string) error {
 	var buf bytes.Buffer
